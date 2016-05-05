@@ -7,10 +7,7 @@ var xml2js = require('xml2js'),
 var captialize = function(str){
   return str[0].toUpperCase() + str.substring(1);
 };
-function replaceTwoBrace(str){
-    str = str.replace(/{{/g, '{ {');
-    return str;
-};
+
 hexo.extend.migrator.register('wordpress', function(args, callback){
   var source = args._.shift();
 
@@ -56,7 +53,7 @@ hexo.extend.migrator.register('wordpress', function(args, callback){
         var title = item.title[0],
           id = item['wp:post_id'][0],
           date = item['wp:post_date'][0],
-          slug = item['wp:post_name'][0],
+          slug = item.title[0], //item['wp:post_name'][0],
           content = item['content:encoded'][0],
           comment = item['wp:comment_status'][0],
           status = item['wp:status'][0],
@@ -67,10 +64,11 @@ hexo.extend.migrator.register('wordpress', function(args, callback){
         if (!title && !slug) return next();
         if (type !== 'post' && type !== 'page') return next();
         if (typeof content !== 'string') content = '';
-        content = replaceTwoBrace(content);
+
         content = tomd(content).replace(/\r\n/g, '\n');
         count++;
 
+        var categoryIndex = 0;
         if (item.category){
           item.category.forEach(function(category, next){
             var name = category._;
@@ -78,18 +76,21 @@ hexo.extend.migrator.register('wordpress', function(args, callback){
             switch (category.$.domain){
               case 'category':
                 categories.push(name);
-                break;
-
+                if (categoryIndex == 0){
+                  slug = name + "--" + slug;
+                }
               case 'post_tag':
                 tags.push(name);
                 break;
             }
+            categoryIndex = categoryIndex + 1;
           });
         }
-
+        
+        var ymdString = date.substring(0, 10).replace(/-/g, "/");
         var data = {
           title: title || slug,
-          url: +id+".html",
+          url: "/" + ymdString + "/" + id + "/", // need more: year, mon, day
           id: +id,
           date: date,
           content: content,
